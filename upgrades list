@@ -1,0 +1,24 @@
+Entity:
+    Health
+    Speed
+    Turn Rate
+
+    Boats:
+        AA Power
+
+        Carrier:
+            Bomber count
+            Bomber squad size
+            Fighter count
+            Fighter squad size
+
+        Destroyer:
+            Gun Damage
+            Gun Range
+            Gun Fire Rate
+
+    Plane:
+        Fuel
+        Damage
+
+
