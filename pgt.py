@@ -9,8 +9,9 @@ class Text:
         self.y = y
         r = self.text.get_rect()
         if align == "center":
-            x -= r.width / 2
-            y -= r.height / 2
+
+            self.x -= r.width / 2
+            self.y -= r.height / 2
 
     def draw(self, surface):
         surface.blit(self.text, (self.x, self.y))

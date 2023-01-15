@@ -37,19 +37,19 @@ class MainMenu:
     def __init__(self, camera, players_fleet):
         self.players_fleet = players_fleet
         self.music_handler = Music()
-        self.buttons = [pgt.Button(camera.ui, [100, 100, 500, 250], "Levels", black, 60, nata, dark_green, green),
-                        pgt.Button(camera.ui, [100, 400, 500, 250], "Infinite", black, 60, self.activate_infinite_mode,
+        self.buttons = [
+                        pgt.Button(camera.ui, [100, camera.height - 600, 400, 150], "Battle", black, 60, self.activate_infinite_mode,
                                    dark_green, green),
-                        pgt.Button(camera.ui, [650, 400, 500, 250], "Upgrades", black, 60, self.open_upgrade_menu,
+                        pgt.Button(camera.ui, [100, camera.height - 400, 400, 150], "Upgrades", black, 60, self.open_upgrade_menu,
                                    dark_green, green),
-                        pgt.Button(camera.ui, [650, 100, 500, 250], "Help", black, 60, self.show_help, dark_green,
+                        pgt.Button(camera.ui, [100, camera.height - 200, 400, 150], "Help", black, 60, self.show_help, dark_green,
                                    green),
                         pgt.Button(camera.ui, [camera.width - 250, 50, 200, 100], "Mute Music", black, 30,
                                    self.music_handler.toggle_mute, dark_blue,
                                    blue)
                         ]
-        self.texts = [pgt.Text(camera.width / 2, 50, "Boat Game", (128, 128, 255), 60)]
-        self.quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 300, 500, 250], "Quit", black, 60,
+        self.texts = [pgt.Text(camera.width / 2, camera.height / 2, "Boat Game", (128, 128, 255), 120)]
+        self.quit_button = pgt.Button(camera.ui, [camera.width - 300, camera.height - 175, 250, 125], "Quit", black, 60,
                                       self.try_quit, dark_red, red)
         self.confirm_quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 800, 100, 100], "Quit!",
                                               black, 30,

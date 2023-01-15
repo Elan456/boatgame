@@ -150,7 +150,7 @@ class Carrier(Boat):
         self.shoot_at_planes()
         if self.team == 1:
             if len(self.waypoints) > 0:
-                self.follow_waypoints()
+                self.follow_waypoints(camera)
             else:
                 self.d += self.turn_rate * camera.dt
         self.pos_update(camera)
