@@ -3,6 +3,7 @@ import pgt
 from fleet import *
 import battle
 import math as m
+from music import Music
 
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -35,15 +36,21 @@ def button_quit():
 class MainMenu:
     def __init__(self, camera, players_fleet):
         self.players_fleet = players_fleet
+        self.music_handler = Music()
         self.buttons = [pgt.Button(camera.ui, [100, 100, 500, 250], "Levels", black, 60, nata, dark_green, green),
                         pgt.Button(camera.ui, [100, 400, 500, 250], "Infinite", black, 60, self.activate_infinite_mode,
                                    dark_green, green),
                         pgt.Button(camera.ui, [650, 400, 500, 250], "Upgrades", black, 60, self.open_upgrade_menu,
                                    dark_green, green),
                         pgt.Button(camera.ui, [650, 100, 500, 250], "Help", black, 60, self.show_help, dark_green,
-                                   green)]
+                                   green),
+                        pgt.Button(camera.ui, [camera.width - 250, 50, 200, 100], "Mute Music", black, 30,
+                                   self.music_handler.toggle_mute, dark_blue,
+                                   blue)
+                        ]
+        self.texts = [pgt.Text(camera.width / 2, 50, "Boat Game", (128, 128, 255), 60)]
         self.quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 300, 500, 250], "Quit", black, 60,
-                                   self.try_quit, dark_red, red)
+                                      self.try_quit, dark_red, red)
         self.confirm_quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 800, 100, 100], "Quit!",
                                               black, 30,
                                               button_quit, dark_red, red)
@@ -76,17 +83,24 @@ class MainMenu:
         if self.trying_to_quit > 0:
             self.trying_to_quit -= 1
         if self.in_battle:
+            self.music_handler.play_song("battletheme")
             self.infinite_battle.update(camera)
             if self.infinite_battle.done:
                 self.in_battle = False
 
         elif self.in_upgrade_menu:
+            self.music_handler.play_song("upgradetheme")
             self.upgrade_menu.update(camera)
         elif self.help:
+            self.music_handler.play_song("helptheme")
             self.help_menu.update(camera)
         else:
+            self.music_handler.play_song("maintheme")
+
             for b in self.buttons:
                 b.update(camera.mouse)
+            for t in self.texts:
+                t.draw(camera.ui)
             if self.trying_to_quit > 0:
                 self.confirm_quit_button.update(camera.mouse)
             else:
@@ -266,7 +280,6 @@ class UpgradeButton:
     def do_upgrade(self):
 
         if self.players_fleet.money >= self.cost and self.selected.upgrade_stage[self.upgrade_name] < 6:
-
             self.players_fleet.money -= self.cost
             self.selected.upgrade(self.upgrade_name)
 
@@ -286,8 +299,8 @@ class UpgradeButton:
         if self.selected.upgrade_stage[self.upgrade_name] < 6:  # Can they still buy upgrades
             pgt.text(camera.ui, (self.x + 5, self.y + 30), "$ " + str(show_cost), black, 40, "right")
 
-        pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5), "Current: " + str(current_value), black,
-                 35, "right")
+        # pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5), "Current: " + str(current_value), black,
+        #          35, "right")
         star_x = self.x + 90
         star_y = self.y + 10
 
@@ -330,14 +343,15 @@ class Help:
             HelpText(startx, starty + spacy * 10, "        Carrier- Send protective fighters/bombing attack"),
             HelpText(startx, starty + spacy * 12, "    Each boat you sink will give more money than the last"),
             HelpText(startx, starty + spacy * 13, "    Enemy boats also become more powerful as more are sunk"),
-            HelpText(startx, starty + spacy * 15, "How to upgrade:"),
-            HelpText(startx, starty + spacy * 16, "    Click on the Upgrades button in the main menu"),
-            HelpText(startx, starty + spacy * 17, "    Select a boat from the left side"),
-            HelpText(startx, starty + spacy * 18, "    Purchase relevant upgrades on the right side"),
-            HelpText(startx, starty + spacy * 19,
+            HelpText(startx, starty + spacy * 14, "    During a battle press esc to go back to the main menu"),
+            HelpText(startx, starty + spacy * 16, "How to upgrade:"),
+            HelpText(startx, starty + spacy * 17, "    Click on the Upgrades button in the main menu"),
+            HelpText(startx, starty + spacy * 18, "    Select a boat from the left side"),
+            HelpText(startx, starty + spacy * 19, "    Purchase relevant upgrades on the right side"),
+            HelpText(startx, starty + spacy * 20,
                      "    In the top left corner, you can select your bombers or fighters to upgrade them"),
-            HelpText(startx, starty + spacy * 20, "    Upgrading the planes will make them better for all carriers"),
-            HelpText(startx, starty + spacy * 21,
+            HelpText(startx, starty + spacy * 21, "    Upgrading the planes will make them better for all carriers"),
+            HelpText(startx, starty + spacy * 22,
                      "    The two buttons on the bottom of the left side allow you to purchase more boats"),
         ]
 

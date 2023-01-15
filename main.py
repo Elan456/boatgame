@@ -1,4 +1,5 @@
 import pygame
+
 import math as m
 from boat import *
 from plane import *
@@ -7,6 +8,8 @@ from menu import MainMenu
 from fleet import Fleet
 
 pygame.init()
+
+
 
 black = (0, 0, 0, 0)
 white = (255, 255, 255)
