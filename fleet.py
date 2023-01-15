@@ -9,8 +9,11 @@ to each abstract boat using the abstract boat's values.
 import math as m
 import pygame
 import pgt
+import upgrades
+import random
 
-size = 20
+size = 40
+psize = 10
 blue = (0, 0, 255)
 
 
@@ -29,10 +32,9 @@ class Fleet:
         self.by = 0
 
         self.level = 1  # What level does the player need to beat next
-        self.money = 100  # How much money the player has
+        self.money = 10  # How much money the player has
 
     def add_new_carrier(self):
-
         self.boats.append(AbstractCarrier())
         self.entities = [self.bombers, self.fighters] + self.boats
         self.carrier_count += 1
@@ -44,41 +46,61 @@ class Fleet:
 
 
 class AbstractEntity:
-    def __init__(self, health, speed, turn_rate):
-        self.health = health
-        self.speed = speed
-        self.turn_rate = turn_rate
-        self.upgrade_counts = {"health": 0,
-                               "speed": 0,
-                               "turn_rate": 0,
-                               "aa_power": 0,
-                               "bomber_count": 0,
-                               "bomber_squad_size": 0,
-                               "fighter_count": 0,
-                               "fighter_squad_size": 0,
-                               "gun_damage": 0,
-                               "gun_range": 0,
-                               "gun_fire_rate": 0,
-                               "fuel": 0,
-                               "damage": 0}
+    def __init__(self):
+        self.upgrade_list = ["health",
+                             "speed",
+                             "turn_rate",
+                             "aa_power",
+                             "bomber_count",
+                             "bomber_squad_size",
+                             "fighter_count",
+                             "fighter_squad_size",
+                             "gun_damage",
+                             "gun_range",
+                             "gun_fire_rate",
+                             "shell_speed",
+                             "fuel",
+                             "damage"]
+
+        self.upgrade_stage = {}
+        for u in self.upgrade_list:
+            self.upgrade_stage[u] = 1  # Starting all upgrades at 1
+        for u in self.upgrade_list:
+            self.set_upgrade_value_from_stage(u)
+
+        self.number_of_upgrades = len(self.upgrade_stage)
         self.x = 0
         self.y = 0
 
+    def random_upgrade(self):
+        """
+        Upgrades one of the upgrades randomly, used for infinite mode, sometimes the upgrade is not applicable, so what
+        """
+        self.upgrade(random.choice(self.upgrade_list))
+
+    def set_upgrade_value_from_stage(self, name):
+        try:
+            self.__setattr__(name,
+                             getattr(upgrades.get_class(self.__class__.__name__), name).get_value(
+                                 self.upgrade_stage[name]))
+        except AttributeError:
+            pass
+
+    def upgrade(self, name):
+        if self.upgrade_stage[name] < 6:
+            self.upgrade_stage[name] += 1
+
+            self.set_upgrade_value_from_stage(name)
+
 
 class AbstractBoat(AbstractEntity):
-    def __init__(self, health, speed, turn_rate, aa_power):
-        super().__init__(health, speed, turn_rate)
-        self.aa_power = aa_power
+    def __init__(self):
+        super().__init__()
 
 
 class AbstractCarrier(AbstractBoat):
-    def __init__(self, health=1000, speed=.2, turn_rate=.005, aa_power=.5,
-                 bomber_count=3, bomber_squad_size=1, fighter_count=2, fighter_squad_size=1):
-        super().__init__(health, speed, turn_rate, aa_power)
-        self.fighter_squad_size = fighter_squad_size
-        self.fighter_count = fighter_count
-        self.bomber_squad_size = bomber_squad_size
-        self.bomber_count = bomber_count
+    def __init__(self):
+        super().__init__()
 
     def draw(self, camera):
         x = self.x
@@ -98,11 +120,8 @@ class AbstractCarrier(AbstractBoat):
 
 
 class AbstractDestroyer(AbstractBoat):
-    def __init__(self, health=200, speed=.3, turn_rate=.01, aa_power=.2, gun_damage=1, gun_range=50, gun_fire_rate=.001):
-        super().__init__(health, speed, turn_rate, aa_power)
-        self.gun_fire_rate = gun_fire_rate
-        self.gun_range = gun_range
-        self.gun_damage = gun_damage
+    def __init__(self):
+        super().__init__()
 
     def draw(self, camera):
         x = self.x
@@ -123,40 +142,38 @@ class AbstractDestroyer(AbstractBoat):
 
 
 class AbstractPlane(AbstractEntity):
-    def __init__(self, health, speed, turn_rate, fuel, damage):
-        super().__init__(health, speed, turn_rate)
-        self.fuel = fuel
-        self.damage = damage
+    def __init__(self):
+        super().__init__()
 
 
 class AbstractBomber(AbstractPlane):
     def __init__(self, health=20, speed=.5, turn_rate=.02, fuel=200, damage=1):
-        super().__init__(health, speed, turn_rate, fuel, damage)
+        super().__init__()
 
     def draw(self, camera):
         x = self.x
         y = self.y
         a = m.atan(1 / 1.5)
         d = m.pi / 2
-        points = [(x + m.cos(d) * size, y + m.sin(d) * size),
-                  (x + m.cos(d - a + m.pi) * size, y + m.sin(d - a + m.pi) * size),
-                  (x - m.cos(d) * size * 1.5, y - m.sin(d) * size * 1.5),
-                  (x + m.cos(d + a + m.pi) * size, y + m.sin(d + a + m.pi) * size)]
+        points = [(x + m.cos(d) * psize, y + m.sin(d) * psize),
+                  (x + m.cos(d - a + m.pi) * psize, y + m.sin(d - a + m.pi) * psize),
+                  (x - m.cos(d) * psize * 1.5, y - m.sin(d) * psize * 1.5),
+                  (x + m.cos(d + a + m.pi) * psize, y + m.sin(d + a + m.pi) * psize)]
 
         pygame.draw.polygon(camera.ui, blue, points, 1)
 
 
 class AbstractFighter(AbstractPlane):
-    def __init__(self, health=10, speed=.6, turn_rate=.03, fuel=300, damage=1):
-        super().__init__(health, speed, turn_rate, fuel, damage)
+    def __init__(self):
+        super().__init__()
 
     def draw(self, camera):
         x = self.x
         y = self.y
         a = m.atan(1 / 2)
         d = m.pi / 2
-        points = [(x + m.cos(d) * size, y + m.sin(d) * size),
-                  (x + m.cos(d - a + m.pi) * size, y + m.sin(d - a + m.pi) * size),
-                  (x + m.cos(d + a + m.pi) * size, y + m.sin(d + a + m.pi) * size)]
+        points = [(x + m.cos(d) * psize, y + m.sin(d) * psize),
+                  (x + m.cos(d - a + m.pi) * psize, y + m.sin(d - a + m.pi) * psize),
+                  (x + m.cos(d + a + m.pi) * psize, y + m.sin(d + a + m.pi) * psize)]
 
         pygame.draw.polygon(camera.ui, blue, points, 1)

@@ -14,8 +14,12 @@ blue = (0, 0, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 
-d_width = 1920
-d_height = 1080
+print(pygame.display.Info())
+
+display_info = pygame.display.Info()
+
+d_width = display_info.current_w
+d_height = display_info.current_h
 
 gameDisplay = pygame.display.set_mode((d_width, d_height))
 boat_surface = pygame.surface.Surface((d_width, d_height), pygame.SRCALPHA)
@@ -26,7 +30,7 @@ clock = pygame.time.Clock()
 
 players_fleet = Fleet()
 
-camera = Camera(0, 0, [pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]], 1920, 1080, clock, gameDisplay, boat_surface, plane_surface, ui_surface)
+camera = Camera(0, 0, [pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]], d_width, d_height, clock, gameDisplay, boat_surface, plane_surface, ui_surface)
 camera.players_fleet = players_fleet
 main_menu = MainMenu(camera, players_fleet)
 
@@ -72,7 +76,8 @@ def do_menu():
         pygame.draw.rect(camera.gameDisplay, white, [10, 10, camera.width - 20, camera.height - 20], 1)
         pgt.text(camera.gameDisplay, (20, 20), str(int(camera.clock.get_fps())), (100, 100, 100), 15, "right")
         pygame.display.update()
-        clock.tick(60)
+        camera.dt = clock.tick(60) / 16
+
 
 
 do_menu()

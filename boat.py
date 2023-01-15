@@ -56,7 +56,7 @@ class Boat:
             targeted_plane = c_squad.planes[self.aa_tick % len(c_squad.planes)]
             self.global_projs.append(Bullet(self.x, self.y, lead_shot(self, targeted_plane, 5, cd), targeted_plane, damage=self.aa_power))
 
-    def follow_waypoints(self):
+    def follow_waypoints(self, camera):
         wx = self.waypoints[0][0]
         wy = self.waypoints[0][1]
         dtw = m.atan2(wy - self.y, wx - self.x)
@@ -66,9 +66,9 @@ class Boat:
         if distance < size * 5 and m.sqrt((m.cos(self.d) - m.cos(dtw)) ** 2) + ((m.sin(self.d) - m.sin(dtw)) ** 2) >= 2:
             inverse = -1
         if m.cos(dtw) * m.sin(self.d) > m.sin(dtw) * m.cos(self.d):  # Deciding which way to turn to face the point
-            self.d -= self.turn_rate * inverse
+            self.d -= self.turn_rate * inverse * camera.dt
         else:
-            self.d += self.turn_rate * inverse
+            self.d += self.turn_rate * inverse * camera.dt
         if distance < size:
             self.waypoints.pop(0)
 
@@ -82,22 +82,22 @@ class Boat:
         elif self.y < 10 + size:
             self.y = 10 + size
 
-    def avoid_overlap(self):  # Guides ships away from each other
+    def avoid_overlap(self, camera):  # Guides ships away from each other
         for b in self.global_boats:
             if b != self:
                 distance = m.dist((self.x, self.y), (b.x, b.y))
                 if distance < size * 2:
                     dtw = m.atan2(b.y - self.y, b.x - self.x)
                     if m.cos(dtw) * m.sin(self.d) > m.sin(dtw) * m.cos(self.d):
-                        self.d += self.turn_rate * 2
+                        self.d += self.turn_rate * 2 * camera.dt
                     else:
-                        self.d -= self.turn_rate * 2
+                        self.d -= self.turn_rate * 2 * camera.dt
                     break
 
     def pos_update(self, camera):
-        self.avoid_overlap()
-        self.x += m.cos(self.d) * self.speed
-        self.y += m.sin(self.d) * self.speed
+        self.avoid_overlap(camera)
+        self.x += m.cos(self.d) * self.speed * camera.dt
+        self.y += m.sin(self.d) * self.speed * camera.dt
         self.map_border_collisions(camera)
 
     def draw_health_bar(self, surface):
@@ -106,8 +106,10 @@ class Boat:
 
 class Carrier(Boat):
     def __init__(self, x=0, y=0, boats=None, squadrons=None, projs=None, d=0, speed=.25, turn_rate=.01, team=1, max_health=100, aa_power=2, bomber_speed=1, bombers_per_squadron=8, bomb_damage=5,
-                 bomber_fuel=1000, bomber_health=100, fighter_speed=1, fighters_per_squadron=3, fighter_power=5, fighter_fuel=1000, fighter_health=50, fighters=12, bombers=24):
+                 bomber_fuel=1000, bomber_health=100, bomber_turn_rate=.02, fighter_speed=1, fighters_per_squadron=3, fighter_power=5, fighter_fuel=1000, fighter_health=50, fighter_turn_rate=.03, fighters=12, bombers=24):
         super().__init__(x, y, boats, squadrons, projs, d, speed, turn_rate, team, max_health, aa_power)
+        self.fighter_turn_rate = fighter_turn_rate
+        self.bomber_turn_rate = bomber_turn_rate
         self.camera = None
         self.sending_bombers = None
         self.fighter_power = fighter_power
@@ -126,16 +128,18 @@ class Carrier(Boat):
 
         # AI modes
         self.mode = "offensive"
+        self.plane_cooldown = 0
         if self.team == 1:
             self.plane_cooldown = 0
-        else:
-            self.plane_cooldown = random.randint(300, 500)
+        # else:
+        #     self.plane_cooldown = random.randint(300, 500)
         self.bomber_range = self.bomber_fuel * self.bomber_speed - 50
 
     def update(self, camera):
         self.camera = camera
         if self.plane_cooldown > 0:
-            self.plane_cooldown -= 1
+            self.plane_cooldown -= 1 * camera.dt
+        self.plane_cooldown = max(0, self.plane_cooldown)  # To keep it above 0
         if self.plane_cooldown == 0 and self.sending_bombers is not None:
             if self.team == 2:
                 self.send_bombers(self.sending_bombers, extra_cooldown=random.randint(200, 2000))
@@ -148,7 +152,7 @@ class Carrier(Boat):
             if len(self.waypoints) > 0:
                 self.follow_waypoints()
             else:
-                self.d += self.turn_rate
+                self.d += self.turn_rate * camera.dt
         self.pos_update(camera)
 
         if self.health <= 0:
@@ -193,23 +197,28 @@ class Carrier(Boat):
                     distance = m.dist((self.x, self.y), (ax, ay))
                     if distance < 500:
                         if m.cos(d) * m.sin(self.d) > m.sin(d) * m.cos(self.d):  # Deciding which way to turn to face the point
-                            self.d -= self.turn_rate
+                            self.d -= self.turn_rate * camera.dt
                         else:
-                            self.d += self.turn_rate
+                            self.d += self.turn_rate * camera.dt
                     else:
-                        self.d += self.turn_rate
+                        self.d += self.turn_rate * camera.dt
             elif self.mode == "offensive":
-                # Move towards closest enemy carrier
+                # Move towards closest enemy boat
                 cec = sorted(self.global_boats, key=lambda b: m.dist((b.x, b.y), (self.x, self.y)) if b.team == 1 else float("inf"))[0]
                 d = m.atan2(cec.y - self.y, cec.x - self.x)
-                if m.dist((cec.x, cec.y), (self.x, self.y)) > 500:
+                # Move away if too close
+                if self.bombers > 0:
+                    br = self.bomber_range
+                else:
+                    br = 0
+                if m.dist((cec.x, cec.y), (self.x, self.y)) > br - 50:
                     inverse = 1
                 else:
                     inverse = -1
                 if m.cos(d) * m.sin(self.d) > m.sin(d) * m.cos(self.d):  # Deciding which way to turn to face the point
-                    self.d -= self.turn_rate * inverse
+                    self.d -= self.turn_rate * inverse * camera.dt
                 else:
-                    self.d += self.turn_rate * inverse
+                    self.d += self.turn_rate * inverse * camera.dt
 
     def ai_send_fighters(self):
         for s in self.global_squadrons:
@@ -288,6 +297,7 @@ class Carrier(Boat):
     def ai_send_bombers(self):
         boat = self.ai_choose_boat_bomb()
         if boat is not None:
+
             # pygame.draw.circle(self.camera.foreground, (0, 200, 255), (boat.x, boat.y), 15, 2)
             self.send_fighters(boat)
             self.sending_bombers = boat
@@ -313,7 +323,7 @@ class Carrier(Boat):
         if self.plane_cooldown == 0:
             count = min(self.bombers, self.bombers_per_squadron)
             if count > 0:
-                new_squadron = BomberSquadron(self, self.bomber_speed, self.team, count, target_boat, self.bomb_damage, self.bomber_fuel, self.bomber_health)
+                new_squadron = BomberSquadron(self, self.bomber_speed, self.team, count, target_boat, self.bomb_damage, self.bomber_fuel, self.bomber_health, self.bomber_turn_rate)
                 self.global_squadrons.append(new_squadron)
                 self.my_squadrons.append(new_squadron)
                 self.bombers -= count
@@ -324,11 +334,11 @@ class Carrier(Boat):
             count = min(self.fighters, self.fighters_per_squadron)
             if count > 0:
                 new_squadron = FighterSquadron(self, self.fighter_speed, self.team, count, target_boat,
-                                               self.fighter_power, self.fighter_fuel, self.fighter_health, self.global_squadrons, self.global_projs)
+                                               self.fighter_power, self.fighter_fuel, self.fighter_health, self.fighter_turn_rate, self.global_squadrons, self.global_projs)
                 self.global_squadrons.append(new_squadron)
                 self.my_squadrons.append(new_squadron)
                 self.fighters -= count
-                self.plane_cooldown = 100
+                self.plane_cooldown = 10
 
     def draw(self, camera):
         surface = camera.background
@@ -345,7 +355,7 @@ class Carrier(Boat):
                   (x + m.cos(d + a + pi) * size, y + m.sin(d + a + pi) * size)]
 
         pygame.draw.polygon(surface, self.color, points, 1)
-
+        #  pygame.draw.circle(surface, (128, 128, 0), (self.x, self.y), self.bomber_speed * self.bomber_fuel, 1)
         for w in self.waypoints:
             pygame.draw.circle(surface, (128, 128, 0), w, 5, 1)
         if len(self.waypoints) > 0:
@@ -357,8 +367,9 @@ class Carrier(Boat):
 
 
 class Destroyer(Boat):
-    def __init__(self, x, y, boats, squadrons, proj, d=0, speed=.8, turn_rate=.02, team=1, max_health=50, aa_power=1, gun_power=1, gun_range=100, gun_rate=.005):
+    def __init__(self, x, y, boats, squadrons, proj, d=0, speed=.8, turn_rate=.02, team=1, max_health=50, aa_power=1, gun_power=1, gun_range=100, gun_rate=.005, shell_speed=1.5):
         super().__init__(x, y, boats, squadrons, proj, d, speed, turn_rate, team, max_health, aa_power)
+        self.shell_speed = shell_speed
         self.mode = "fwp"  # Follow way points
         self.escort_boat = None
         self.attack_boat = None
@@ -371,20 +382,26 @@ class Destroyer(Boat):
         self.shoot_at_planes()
         if len(self.waypoints) > 0:
             self.mode = "fwp"
-            self.follow_waypoints()
+            self.follow_waypoints(camera)
         elif self.mode == "escort":
-            self.follow_boat(self.escort_boat)
+            if self.escort_boat.active:
+                self.follow_boat(self.escort_boat, camera)
+            else:
+                self.mode = "fwp"
         elif self.mode == "attack":
-            self.follow_boat(self.attack_boat)
+            if self.attack_boat.active:
+                self.follow_boat(self.attack_boat, camera)
+            else:
+                self.mode = "fwp"
         else:
-            self.d += self.turn_rate  # Default idle action is turning in a circle
+            self.d += self.turn_rate * camera.dt  # Default idle action is turning in a circle
         self.pos_update(camera)
 
         if self.gun_tick > 1:
             if self.shoot_at_boats():
                 self.gun_tick = 0
         else:
-            self.gun_tick += self.gun_rate
+            self.gun_tick += self.gun_rate * camera.dt
 
         if self.health <= 0:
             self.active = False
@@ -429,41 +446,47 @@ class Destroyer(Boat):
                     distance_to_closest_enemy_boat = distance
 
         if distance_to_closest_enemy_boat < self.gun_range:
-            self.global_projs.append(Shell(self.x, self.y, lead_shot(self, ceb, 2, distance_to_closest_enemy_boat), ceb,
-                                           damage=self.gun_power))
+            self.global_projs.append(Shell(self.x, self.y, lead_shot(self, ceb, self.shell_speed, distance_to_closest_enemy_boat), ceb,
+                                           damage=self.gun_power, speed=self.shell_speed))
             return True
         return False
         # Shoot at this boat
 
-    def follow_boat(self, target_boat):
+    def follow_boat(self, target_boat, camera):
         """
         The destroyer will follow another boat so that the other boat stays within the destroyer's gun's range.
         The destoryer will try to not to get any closer than it has too, to hopefully outrange an enemy destroyer's
         return fire.
-        If the target boat is friendly, it will follow it in the same way just without the shooting
+
         :param target_boat: The boat that this is meant to follow
         """
         lead_x = target_boat.x + m.cos(target_boat.d) * target_boat.speed * 100
         lead_y = target_boat.y + m.sin(target_boat.d) * target_boat.speed * 100
 
+
+        if (target_boat.team != self.team):  # Barely keep the target in range if enemy
+            follow_distance = self.gun_range
+        else:
+            follow_distance = 80
+
         dtw = m.atan2(lead_y - self.y, lead_x - self.x)
 
         distance = m.dist((self.x, self.y), (target_boat.x, target_boat.y))
-        if distance < self.gun_range * .8:  # Too close, move away from the boat
+        if distance < follow_distance * .8:  # Too close, move away from the boat
             if m.cos(dtw) * m.sin(self.d) > m.sin(dtw) * m.cos(self.d):
-                self.d += self.turn_rate
+                self.d += self.turn_rate * camera.dt
             else:
-                self.d -= self.turn_rate
-        elif distance < self.gun_range:  # Start moving parralel to the target boat, it's within shooting range
+                self.d -= self.turn_rate * camera.dt
+        elif distance < follow_distance:  # Start moving parralel to the target boat, it's at the right distance
             if m.cos(target_boat.d) * m.sin(self.d) > m.sin(target_boat.d) * m.cos(self.d):
-                self.d -= self.turn_rate
+                self.d -= self.turn_rate * camera.dt
             else:
-                self.d += self.turn_rate
+                self.d += self.turn_rate * camera.dt
         else:  # Move towards the boat, its outside of the shooting range
             if m.cos(dtw) * m.sin(self.d) > m.sin(dtw) * m.cos(self.d):
-                self.d -= self.turn_rate
+                self.d -= self.turn_rate * camera.dt
             else:
-                self.d += self.turn_rate
+                self.d += self.turn_rate * camera.dt
 
     def middle_click_operation(self, target_boat):
         # Escort friendly boats, attack enemy boats

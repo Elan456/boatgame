@@ -30,19 +30,27 @@ class Projectile:
     def __init__(self, x, y, d, target, damage):
         self.x = x
         self.y = y
+        self.start_x = self.x
+        self.start_y = self.y
         self.d = d
         self.damage = damage
         self.target = target
+
+        self.intended_range = m.dist((x, y), (target.x, target.y))
+
         self.active = True
         self.speed = 0
 
     def update(self, camera):
-        self.x += m.cos(self.d) * self.speed
-        self.y += m.sin(self.d) * self.speed
+        self.x += m.cos(self.d) * self.speed * camera.dt
+        self.y += m.sin(self.d) * self.speed * camera.dt
 
         if m.dist((self.x, self.y), (self.target.x, self.target.y)) < 20 and self.active and self.target.active:
             self.active = False
             self.deal_damage()
+
+        elif m.dist((self.start_x, self.start_y), (self.x, self.y)) > self.intended_range + 40:
+            self.active = False
 
         self.map_border_collisions(camera)
 
@@ -55,13 +63,15 @@ class Projectile:
 
 
 class Shell(Projectile):
-    def __init__(self, x, y, d, target, damage=5):
+    def __init__(self, x, y, d, target, damage=5, speed=2):
         super().__init__(x, y, d, target, damage)
         self.color = {2: (0, 0, 200), 1: (200, 0, 0)}[target.team]
-        self.speed = 2  # All shells have a speed of this value
+        self.speed = speed
+        self.hit_target = False
 
     def deal_damage(self):
         self.target.health -= self.damage
+        self.hit_target = True
 
     def draw(self, camera):
         a = m.atan(1 / 2)

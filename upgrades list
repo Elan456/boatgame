@@ -16,6 +16,7 @@ Entity:
             Gun Damage
             Gun Range
             Gun Fire Rate
+            Shell Speed
 
     Plane:
         Fuel

@@ -2,6 +2,7 @@ import pygame
 import pgt
 from fleet import *
 import battle
+import math as m
 
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -16,9 +17,8 @@ blue = (0, 50, 255)
 dark_blue = (0, 50, 150)
 
 b_width = 250
-b_height = 100
-start_y = 50
-start_x = 1600
+b_height = 80
+
 yspac = 115  # Spacing in the y direction
 text_size = 25
 
@@ -36,16 +36,28 @@ class MainMenu:
     def __init__(self, camera, players_fleet):
         self.players_fleet = players_fleet
         self.buttons = [pgt.Button(camera.ui, [100, 100, 500, 250], "Levels", black, 60, nata, dark_green, green),
-                        pgt.Button(camera.ui, [100, 400, 500, 250], "Infinite", black, 60, self.activate_infinite_mode, dark_green, green),
-                        pgt.Button(camera.ui, [650, 400, 500, 250], "Upgrades", black, 60, self.open_upgrade_menu, dark_green, green),
-                        pgt.Button(camera.ui, [650, 100, 500, 250], "Help", black, 60, self.show_help, dark_green, green),
-                        pgt.Button(camera.ui, [1920 - 550, 1080 - 300, 500, 250], "Quit", black, 60, button_quit, dark_red, red)]
+                        pgt.Button(camera.ui, [100, 400, 500, 250], "Infinite", black, 60, self.activate_infinite_mode,
+                                   dark_green, green),
+                        pgt.Button(camera.ui, [650, 400, 500, 250], "Upgrades", black, 60, self.open_upgrade_menu,
+                                   dark_green, green),
+                        pgt.Button(camera.ui, [650, 100, 500, 250], "Help", black, 60, self.show_help, dark_green,
+                                   green)]
+        self.quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 300, 500, 250], "Quit", black, 60,
+                                   self.try_quit, dark_red, red)
+        self.confirm_quit_button = pgt.Button(camera.ui, [camera.width - 550, camera.height - 800, 100, 100], "Quit!",
+                                              black, 30,
+                                              button_quit, dark_red, red)
         self.help = False
         self.in_upgrade_menu = False
         self.in_battle = False
         self.upgrade_menu = UpgradeMenu(self, camera, players_fleet)
-        self.infinte_battle = battle.Infinite(camera)
+        self.help_menu = Help(self, camera)
+        self.infinite_battle = battle.Infinite(camera)
         self.camera = camera
+        self.trying_to_quit = 0
+
+    def try_quit(self):
+        self.trying_to_quit = 100
 
     def show_help(self):
         if self.help:
@@ -54,29 +66,38 @@ class MainMenu:
             self.help = True
 
     def activate_infinite_mode(self):
-        self.infinte_battle = battle.Infinite(self.camera)
+        self.infinite_battle = battle.Infinite(self.camera)
         self.in_battle = True
 
     def open_upgrade_menu(self):
         self.in_upgrade_menu = True
 
     def update(self, camera):
+        if self.trying_to_quit > 0:
+            self.trying_to_quit -= 1
         if self.in_battle:
-            self.infinte_battle.update(camera)
-            if self.infinte_battle.done:
+            self.infinite_battle.update(camera)
+            if self.infinite_battle.done:
                 self.in_battle = False
+
+        elif self.in_upgrade_menu:
+            self.upgrade_menu.update(camera)
+        elif self.help:
+            self.help_menu.update(camera)
         else:
-            if not self.in_upgrade_menu:
-                for b in self.buttons:
-                    b.update(camera.mouse)
-                if self.help:
-                    pgt.text(camera.ui, (300, 410), "Just figure it out dummy...", white, 50, "right")
+            for b in self.buttons:
+                b.update(camera.mouse)
+            if self.trying_to_quit > 0:
+                self.confirm_quit_button.update(camera.mouse)
             else:
-                self.upgrade_menu.update(camera)
+                self.quit_button.update(camera.mouse)
 
 
 class UpgradeMenu:
     def __init__(self, main_menu, camera, players_fleet):
+        start_y = 30
+        start_x = camera.width - 320
+
         self.players_fleet = players_fleet
         players_fleet.fx, players_fleet.fy = 50, 900
         players_fleet.bx, players_fleet.by = 100, 900
@@ -85,7 +106,8 @@ class UpgradeMenu:
 
         self.main_menu = main_menu
 
-        self.exit_button = pgt.Button(camera.ui, [start_x, start_y + yspac * 8, b_width, b_height], "Exit", black, text_size, self.button_exit, dark_red, red)
+        self.exit_button = pgt.Button(camera.ui, [start_x, start_y + yspac * 8, b_width, b_height], "Exit", black,
+                                      text_size, self.button_exit, dark_red, red)
 
         self.buy_boat = [
             BuyButton(camera.ui, [50, 700, b_width, b_height], "New Carrier", "carrier"),
@@ -104,15 +126,21 @@ class UpgradeMenu:
 
         self.buttons_carrier = self.buttons_entity + self.buttons_boat + [
             UpgradeButton(camera.ui, [start_x, start_y + yspac * 4, b_width, b_height], "Bomber Count", "bomber_count"),
-            UpgradeButton(camera.ui, [start_x, start_y + yspac * 5, b_width, b_height], "Bomber Squad Size", "bomber_squad_size"),
-            UpgradeButton(camera.ui, [start_x, start_y + yspac * 6, b_width, b_height], "Fighter Count", "fighter_count"),
-            UpgradeButton(camera.ui, [start_x, start_y + yspac * 7, b_width, b_height], "Fighter Squad Size", "fighter_squad_size")
+            UpgradeButton(camera.ui, [start_x, start_y + yspac * 5, b_width, b_height], "Bomber Squad Size",
+                          "bomber_squad_size"),
+            UpgradeButton(camera.ui, [start_x, start_y + yspac * 6, b_width, b_height], "Fighter Count",
+                          "fighter_count"),
+            UpgradeButton(camera.ui, [start_x, start_y + yspac * 7, b_width, b_height], "Fighter Squad Size",
+                          "fighter_squad_size")
         ]
 
         self.buttons_destroyer = self.buttons_entity + self.buttons_boat + [
             UpgradeButton(camera.ui, [start_x, start_y + yspac * 4, b_width, b_height], "Gun Damage", "gun_damage"),
             UpgradeButton(camera.ui, [start_x, start_y + yspac * 5, b_width, b_height], "Gun Range", "gun_range"),
-            UpgradeButton(camera.ui, [start_x, start_y + yspac * 6, b_width, b_height], "Gun Fire Rate", "gun_fire_rate")
+            UpgradeButton(camera.ui, [start_x, start_y + yspac * 6, b_width, b_height], "Gun Fire Rate",
+                          "gun_fire_rate"),
+            UpgradeButton(camera.ui, [start_x, start_y + yspac * 7, b_width, b_height], "Shell Speed",
+                          "shell_speed")
         ]
 
         self.buttons_plane = self.buttons_entity + [
@@ -202,6 +230,16 @@ class BuyButton:
         pgt.text(camera.ui, (self.x + self.w / 2, self.y + 50), "$" + str(round(self.cost, 2)), black, 30)
 
 
+def draw_star(surface, x, y, size, thickness):
+    points = [(x, y)]
+    angle = m.pi / 2 - m.radians(18)
+    for n in range(5):
+        n_x, n_y = points[-1]
+        points.append((n_x + m.cos(angle) * size, n_y + m.sin(angle) * size))
+        angle += m.radians(144)
+
+    pygame.draw.lines(surface, (255, 255, 0), False, points, thickness)
+
 
 class UpgradeButton:
     xspac = 30
@@ -223,15 +261,14 @@ class UpgradeButton:
 
     def get_cost(self):
         self.selected = self.camera.selected_boat_abstract
-        return 1 * (1.2 ** self.selected.upgrade_counts[self.upgrade_name])
+        return 1 * (5 ** (self.selected.upgrade_stage[self.upgrade_name] - 1))
 
     def do_upgrade(self):
-        print("trying to do upgrade")
-        if self.players_fleet.money >= self.cost:
-            print("did upgrade")
+
+        if self.players_fleet.money >= self.cost and self.selected.upgrade_stage[self.upgrade_name] < 6:
+
             self.players_fleet.money -= self.cost
-            setattr(self.selected, self.upgrade_name, getattr(self.selected, self.upgrade_name) * 1.1)
-            self.selected.upgrade_counts[self.upgrade_name] += 1
+            self.selected.upgrade(self.upgrade_name)
 
     def update(self, camera):
         self.camera = camera
@@ -242,14 +279,73 @@ class UpgradeButton:
         self.cost = self.get_cost()
         show_cost = round(self.cost, 1)
         current_value = round(getattr(self.selected, self.upgrade_name), 3)
-        next_value = round(current_value * 1.1, 3)
 
         self.button.update(camera.mouse)
         pgt.text(camera.ui, (self.x + 5, self.y + self.h - 25), self.name, black, 30, "right")
-        pgt.text(camera.ui, (self.x + 5, self.y + 30), "$ " + str(show_cost), black, 40, "right")
-        pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5), "Current: " + str(current_value), black, 35, "right")
-        pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5 + UpgradeButton.yspac), "Next:      " + str(next_value), black, 35, "right")
+
+        if self.selected.upgrade_stage[self.upgrade_name] < 6:  # Can they still buy upgrades
+            pgt.text(camera.ui, (self.x + 5, self.y + 30), "$ " + str(show_cost), black, 40, "right")
+
+        pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5), "Current: " + str(current_value), black,
+                 35, "right")
+        star_x = self.x + 90
+        star_y = self.y + 10
+
+        for n in range(self.selected.upgrade_stage[self.upgrade_name] - 1):
+            draw_star(camera.ui, star_x, star_y, 30, 2)
+            star_x += 35
 
 
 class LevelSelect:
     pass
+
+
+class HelpText(pgt.Text):
+    def __init__(self, x, y, text):
+        super().__init__(x, y, text, black, 35, "left")
+
+
+class Help:
+    def __init__(self, main_menu, camera):
+        self.camera = camera
+        self.main_menu = main_menu
+
+        self.exit_button = pgt.Button(camera.ui, [camera.width - 200, camera.height - 150, 150, 100], "Exit", black,
+                                      text_size, self.button_exit, dark_red, red)
+
+        startx = 100
+        starty = 100
+        spacy = 35
+
+        self.texts = [
+            HelpText(startx, starty, "How to play:"),
+            HelpText(startx, starty + spacy * 1, "    Left click to select boats"),
+            HelpText(startx, starty + spacy * 3, "    Right click to set waypoints for the selected boat"),
+            HelpText(startx, starty + spacy * 4,
+                     "    Right click twice in the same spot to clear waypoints for the selected boat"),
+            HelpText(startx, starty + spacy * 6, "    Middle click on another boat to do the selected boat's special"),
+            HelpText(startx, starty + spacy * 7, "    Middle clicking on a friendly boat does something different"),
+            HelpText(startx, starty + spacy * 8, "    than middle clicking on an enemy boat for the selected boat"),
+            HelpText(startx, starty + spacy * 9, "        Destroyer - Escort/Engage"),
+            HelpText(startx, starty + spacy * 10, "        Carrier- Send protective fighters/bombing attack"),
+            HelpText(startx, starty + spacy * 12, "    Each boat you sink will give more money than the last"),
+            HelpText(startx, starty + spacy * 13, "    Enemy boats also become more powerful as more are sunk"),
+            HelpText(startx, starty + spacy * 15, "How to upgrade:"),
+            HelpText(startx, starty + spacy * 16, "    Click on the Upgrades button in the main menu"),
+            HelpText(startx, starty + spacy * 17, "    Select a boat from the left side"),
+            HelpText(startx, starty + spacy * 18, "    Purchase relevant upgrades on the right side"),
+            HelpText(startx, starty + spacy * 19,
+                     "    In the top left corner, you can select your bombers or fighters to upgrade them"),
+            HelpText(startx, starty + spacy * 20, "    Upgrading the planes will make them better for all carriers"),
+            HelpText(startx, starty + spacy * 21,
+                     "    The two buttons on the bottom of the left side allow you to purchase more boats"),
+        ]
+
+    def button_exit(self):
+        self.main_menu.help = False
+
+    def update(self, camera):
+        pygame.draw.rect(camera.ui, (139, 69, 19), [50, 50, camera.width - 100, camera.height - 100])
+        self.exit_button.update(camera.mouse)
+        for t in self.texts:
+            t.draw(camera.ui)

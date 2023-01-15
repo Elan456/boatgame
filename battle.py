@@ -4,45 +4,59 @@ from projectile import *
 from boat import *
 from plane import *
 from fleet import *
+from effects import *
 
 white = (255, 255, 255)
 black = (0, 0, 0)
 
 
+# noinspection PyTypeChecker
 class Battle:
     def __init__(self, camera):
-        print("camera:", camera)
+
         self.squadrons = []
         self.projs = []
         self.boats = []
+        self.effects = []
         self.done = False
         self.boats_sunk = 0
 
         # Populating the boats with the player's boats
 
         fleet = camera.players_fleet
-        print("fleet:", fleet)
+
         for ab in fleet.boats:
-            print(ab.speed)
+
             if isinstance(ab, AbstractCarrier):
-                self.boats.append(
-                    Carrier(camera.width / 2, camera.height / 2, self.boats, self.squadrons, self.projs,
-                            speed=ab.speed, turn_rate=ab.turn_rate, max_health=ab.health, aa_power=ab.aa_power,
-                            bomber_speed=fleet.bombers.speed, bombers_per_squadron=ab.bomber_squad_size,
-                            bomb_damage=fleet.bombers.damage, bomber_fuel=fleet.bombers.fuel,
-                            bomber_health=fleet.bombers.health, fighter_speed=fleet.fighters.speed,
-                            fighters_per_squadron=ab.fighter_squad_size, fighter_power=fleet.fighters.damage,
-                            fighter_fuel=fleet.fighters.fuel, fighter_health=fleet.fighters.health,
-                            fighters=ab.fighter_count, bombers=ab.bomber_count)
-                )
+                self.spawn_abstract_carrier(ab, fleet, camera.width / 2 + random.randint(-30, 30),
+                                            camera.height / 2 + random.randint(-30, 30), 1)
             elif isinstance(ab, AbstractDestroyer):
-                self.boats.append(
-                    Destroyer(camera.width / 2, camera.height / 2, self.boats, self.squadrons, self.projs,
-                              speed=ab.speed, turn_rate=ab.turn_rate, max_health=ab.health, aa_power=ab.aa_power,
-                              gun_power=ab.gun_damage, gun_range=ab.gun_range, gun_rate=ab.gun_fire_rate)
-                )
+                self.spawn_abstract_destroyer(ab, camera.width / 2 + random.randint(-30, 30),
+                                              camera.height / 2 + random.randint(-30, 30), 1)
 
         camera.selected_boat = self.boats[0]
+
+    def spawn_abstract_carrier(self, ab, fleet, x, y, team):
+        self.boats.append(
+            Carrier(x, y, self.boats, self.squadrons, self.projs, team=team,
+                    speed=ab.speed, turn_rate=ab.turn_rate, max_health=ab.health, aa_power=ab.aa_power,
+                    bomber_speed=fleet.bombers.speed, bombers_per_squadron=ab.bomber_squad_size,
+                    bomb_damage=fleet.bombers.damage, bomber_fuel=fleet.bombers.fuel,
+                    bomber_health=fleet.bombers.health, bomber_turn_rate=fleet.bombers.turn_rate,
+                    fighter_speed=fleet.fighters.speed,
+                    fighters_per_squadron=ab.fighter_squad_size, fighter_power=fleet.fighters.damage,
+                    fighter_fuel=fleet.fighters.fuel, fighter_health=fleet.fighters.health,
+                    fighter_turn_rate=fleet.fighters.turn_rate,
+                    fighters=ab.fighter_count, bombers=ab.bomber_count)
+        )
+
+    def spawn_abstract_destroyer(self, ab, x, y, team):
+        self.boats.append(
+            Destroyer(x, y, self.boats, self.squadrons, self.projs, team=team,
+                      speed=ab.speed, turn_rate=ab.turn_rate, max_health=ab.health, aa_power=ab.aa_power,
+                      gun_power=ab.gun_damage, gun_range=ab.gun_range, gun_rate=ab.gun_fire_rate,
+                      shell_speed=ab.shell_speed)
+        )
 
 
 class Infinite(Battle):
@@ -68,7 +82,9 @@ class Infinite(Battle):
                 elif event.__dict__["button"] == 3:  # right click
 
                     x, y = event.__dict__["pos"]
-                    if len(camera.selected_boat.waypoints) > 0 and m.sqrt((camera.selected_boat.waypoints[-1][0] - x) ** 2 + (camera.selected_boat.waypoints[-1][1] - y) ** 2) < 10:
+                    if len(camera.selected_boat.waypoints) > 0 and m.sqrt(
+                            (camera.selected_boat.waypoints[-1][0] - x) ** 2 + (
+                                    camera.selected_boat.waypoints[-1][1] - y) ** 2) < 50:
                         camera.selected_boat.waypoints = []
                     else:
                         camera.selected_boat.waypoints.append(event.__dict__["pos"])
@@ -103,50 +119,76 @@ class Infinite(Battle):
             if not entity.active:
                 if isinstance(entity, Shell):
                     self.projs.remove(entity)
+                    if entity.hit_target:
+                        self.effects.append(Explosion(entity.x, entity.y))
+                    else:
+                        self.effects.append(Splash(entity.x, entity.y))
                 elif isinstance(entity, Bullet):
                     self.projs.remove(entity)
                 elif isinstance(entity, Boat):
                     self.boats.remove(entity)
                     if entity.team == 2:
-                        camera.players_fleet.money += 5 * 1.2 ** self.boats_sunk
+                        camera.players_fleet.money += 5 * 1.05 ** self.boats_sunk
                         self.boats_sunk += 1
 
                 elif isinstance(entity, Squadron):
                     self.squadrons.remove(entity)
 
+        old_effects = self.effects.copy()
+        for e in old_effects:
+            e.update(camera)
+            if not e.active:  # Remove the effects that are done
+                self.effects.remove(e)
+
         if enemy_boat_count == 0:
+            enemy_fleet = Fleet()
+            # Upgrading the bombers and fighters
+            for _ in range(self.boats_sunk // 2 + 1):
+                enemy_fleet.bombers.random_upgrade()
+                enemy_fleet.fighters.random_upgrade()
+
             c = random.randint(1, max(1, self.boats_sunk))
-            bs = self.boats_sunk
+
             for _ in range(c):
                 # 2 Destroyers for every carrier on average
 
                 if random.choice([0, 0, 1]) == 0:
-                    self.boats.append(Destroyer(random.choice([-100, 2000]), random.choice([-100, 2000]), self.boats,
-                                                self.squadrons, self.projs, team=2, max_health=3 * 1.1 ** self.boats_sunk,
-                                                aa_power=1 * 1.1 ** self.boats_sunk, gun_power=.5 * 1.3 ** self.boats_sunk,
-                                                gun_range=50 * 1.1 ** self.boats_sunk, gun_rate=.001 * 1.1 ** self.boats_sunk))
+                    new_boat = AbstractDestroyer()
                 else:
-                    self.boats.append(Carrier(random.choice([-100, 2000]), camera.height / 2, self.boats,
-                                              self.squadrons, self.projs, team=2,
-                                              max_health=8 * 1.1 ** bs, speed=.2 * 1.01 ** bs, turn_rate=.005 * 1.1 ** bs,
-                                              aa_power=.5 * 1.1 ** bs, bombers=3 * 1.1 ** bs, bombers_per_squadron=1 * 1.1 ** bs,
-                                              fighters=2 * 1.1 ** bs, fighters_per_squadron=1 * 1.1 ** bs, bomber_health=20 * 1.1 ** bs,
-                                              bomber_fuel=200 * 1.1 ** bs, bomb_damage=1 * 1.1 ** bs
-                                              ))
+                    new_boat = AbstractCarrier()
+
+                """
+                Each enemy boat is given a number of random upgrades equal to how many boats you have sunk
+                """
+                for _ in range(self.boats_sunk // 2 + 1):
+                    new_boat.random_upgrade()
+                    # Some upgrades will have no effect
+
+                if isinstance(new_boat, AbstractCarrier):
+                    self.spawn_abstract_carrier(new_boat, enemy_fleet, random.choice([-10, camera.width + 10]),
+                                                camera.height / 2, 2)
+                else:
+                    self.spawn_abstract_destroyer(new_boat, random.choice([-10, camera.width + 10]),
+                                                  random.choice([-10, camera.height + 10]), 2)
 
         if friendly_boat_count == 0:
             self.done = True
 
-        pygame.draw.circle(camera.ui, (0, 255, 0), (camera.selected_boat.x + m.cos(camera.selected_boat.d) * 20 / 2, camera.selected_boat.y + m.sin(camera.selected_boat.d) * 20 / 2), 20 * 2.5, 1)
+        pygame.draw.circle(camera.ui, (0, 255, 0), (camera.selected_boat.x + m.cos(camera.selected_boat.d) * 20 / 2,
+                                                    camera.selected_boat.y + m.sin(camera.selected_boat.d) * 20 / 2),
+                           20 * 2.5, 1)
         if isinstance(camera.selected_boat, Destroyer):
             if camera.selected_boat.gun_tick <= 1:
-                pygame.draw.circle(camera.gameDisplay, (0, 0, 255), (camera.selected_boat.x, camera.selected_boat.y), camera.selected_boat.gun_range, 1)
+                pygame.draw.circle(camera.gameDisplay, (0, 0, 255), (camera.selected_boat.x, camera.selected_boat.y),
+                                   camera.selected_boat.gun_range, 1)
             else:
-                pygame.draw.circle(camera.gameDisplay, (0, 255, 255), (camera.selected_boat.x, camera.selected_boat.y), camera.selected_boat.gun_range, 1)
-        pgt.text(camera.ui, (1700, 30), "Money: $" + str(round(camera.players_fleet.money, 2)), (128, 128, 0), 30, "left")
-        pgt.text(camera.ui, (1700, 60), "Sunk: " + str(self.boats_sunk), (0, 200, 0), 30, "left")
-        pgt.text(camera.ui, (1700, 90), "Next Boat: +$" + str(round(5 * 1.2 ** self.boats_sunk, 2)), (0, 200, 0), 30, "left")
-
+                pygame.draw.circle(camera.gameDisplay, (0, 255, 255), (camera.selected_boat.x, camera.selected_boat.y),
+                                   camera.selected_boat.gun_range, 1)
+        pgt.text(camera.ui, (camera.width - 200, 30), "Money: $" + str(round(camera.players_fleet.money, 2)), (128, 128, 0), 30,
+                 "left")
+        pgt.text(camera.ui, (camera.width - 200, 60), "Sunk: " + str(self.boats_sunk), (0, 200, 0), 30, "left")
+        pgt.text(camera.ui, (camera.width - 200, 90), "Next Boat: +$" + str(round(5 * 1.05 ** self.boats_sunk, 2)), (0, 200, 0), 30,
+                 "left")
 
 
 class Level(Battle):

@@ -16,4 +16,5 @@ class Camera:
         self.selected_boat_abstract = None
         self.players_fleet = None
         self.gameDisplay = gameDisplay
+        self.dt = 0  # Change in time since last frame update
 

@@ -1,6 +1,21 @@
 import pygame
 
 
+class Text:
+    def __init__(self, x, y, text, text_color, text_size, align="center"):
+        self.font = pygame.font.SysFont(None, text_size)
+        self.text = self.font.render(text, True, text_color)
+        self.x = x
+        self.y = y
+        r = self.text.get_rect()
+        if align == "center":
+            x -= r.width / 2
+            y -= r.height / 2
+
+    def draw(self, surface):
+        surface.blit(self.text, (self.x, self.y))
+
+
 def text(surface, coor, text, text_color, text_size, align="center"):
     font = pygame.font.SysFont(None, text_size)
     text = font.render(text, True, text_color)
@@ -10,6 +25,7 @@ def text(surface, coor, text, text_color, text_size, align="center"):
         x -= r.width / 2
         y -= r.height / 2
     surface.blit(text, (x, y))
+
 
 class Button:
     def __init__(self, surface, rect, text, text_color, text_size, action, color, highlighted_color, arg=None):
@@ -33,11 +49,12 @@ class Button:
         self.textcenter = (rect[0] + self.textrect[2] / 2, rect[1] + self.textrect[3] / 2)
 
         self.surface.blit(self.text, (
-            rect[0] - (self.textcenter[0] - self.buttoncenter[0]), rect[1] - (self.textcenter[1] - self.buttoncenter[1])))
+            rect[0] - (self.textcenter[0] - self.buttoncenter[0]),
+            rect[1] - (self.textcenter[1] - self.buttoncenter[1])))
 
     def update(self, mouse=None, newx=None, newy=None):
         global canclick
-        # print(canclick)
+
         if newx is not None:
             self.rect[0] = newx
         if newy is not None:
@@ -49,7 +66,8 @@ class Button:
         if not click:
             canclick = True
 
-        if self.rect[0] < mousex < self.rect[0] + self.rect[2] and mousey > self.rect[1] and mousey < self.rect[1] + self.rect[3]:
+        if self.rect[0] < mousex < self.rect[0] + self.rect[2] and mousey > self.rect[1] and mousey < self.rect[1] + \
+                self.rect[3]:
             if self.color != "none":
                 pygame.draw.rect(self.surface, self.highlighted_color, self.rect)
 

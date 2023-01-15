@@ -8,7 +8,8 @@ size = 10
 
 
 class Squadron:
-    def __init__(self, origin_boat, speed, team, plane_count, target_boat, fuel, hpp):
+    def __init__(self, origin_boat, speed, team, plane_count, target_boat, fuel, hpp, turn_rate):
+        self.turn_rate = turn_rate
         self.distance_target_boat = None
         self.origin_boat = origin_boat
         self.plane_count = plane_count
@@ -57,18 +58,18 @@ class Squadron:
         # Adjusting course to make sure we continue towards the targeted boat
         lead_x = self.target_boat.x + m.cos(self.target_boat.d) * self.target_boat.speed * 100
         lead_y = self.target_boat.y + m.sin(self.target_boat.d) * self.target_boat.speed * 100
-
-        self.distance_target_boat = m.dist((self.x, self.y), (self.target_boat.x, self.target_boat.y))
         if self.distance_target_boat > 100:  # Lead the boat when it's far away
             self.dd = m.atan2(lead_y - self.y, lead_x - self.x)
         else:
             self.dd = m.atan2(self.target_boat.y - self.y, self.target_boat.x - self.x)
 
     def orbit(self):  # Flying around the target boat, if the distance becomes too great, ftb is activated
-        self.dd += .01 * self.orbit_direction
+        self.dd += self.turn_rate / 3 * self.orbit_direction
 
         if m.dist((self.x, self.y), (self.target_boat.x, self.target_boat.y)) > 100:
             self.mode = "ftb"
+        if not self.target_boat.active:
+            self.mode = "rtb"  # Return to base if the boat you are meant to orbit is dead
             # Manuevring the planes back to the target boat if they orbit too far
 
     def rtb(self):
@@ -86,14 +87,14 @@ class Squadron:
             self.mode = "done"
             self.active = False
 
-    def general_update(self):
-
-        self.fuel -= 1
+    def general_update(self, camera):
+        self.distance_target_boat = m.dist((self.x, self.y), (self.target_boat.x, self.target_boat.y))
+        self.fuel -= 1 * camera.dt
         self.purge_planes()
         if len(self.planes) > 0:
             self.calc_position()
             if self.mode != "dgft":  # Do not move the squadron as one unit during a dogfight
-                self.move_squadron()
+                self.move_squadron(camera)
                 self.turn_towards_dd()
             if self.fuel < 0:  # Out of fuel time to return to the carrier they came from
                 self.mode = "rtb"
@@ -123,17 +124,17 @@ class Squadron:
         self.x /= len(self.planes)
         self.y /= len(self.planes)
 
-    def move_squadron(self):
+    def move_squadron(self, camera):
         for p in self.planes:  # Recalculating the x and y of the squadron
             p.d = self.d
-            p.move()
+            p.move(camera)
 
     def turn_towards_dd(self):
         # Turning the squadron towards their desired direction
         if m.cos(self.dd) * m.sin(self.d) > m.sin(self.dd) * m.cos(self.d):
-            self.d -= .03
+            self.d -= self.turn_rate
         else:
-            self.d += .03
+            self.d += self.turn_rate
 
     def draw(self, camera):
         for p in self.planes:
@@ -147,12 +148,12 @@ class Squadron:
 
 
 class BomberSquadron(Squadron):
-    def __init__(self, origin_boat, speed, team, plane_count, target_boat, bomb_damage, fuel, hpp):
-        super().__init__(origin_boat, speed, team, plane_count, target_boat, fuel, hpp)
+    def __init__(self, origin_boat, speed, team, plane_count, target_boat, bomb_damage, fuel, hpp, turn_rate):
+        super().__init__(origin_boat, speed, team, plane_count, target_boat, fuel, hpp, turn_rate)
         self.bomb_damage = bomb_damage
 
     def update(self, camera):
-        self.general_update()  # Update for things that apply to both fighters and bombers squadrons
+        self.general_update(camera)  # Update for things that apply to both fighters and bombers squadrons
 
         if self.distance_target_boat < 10 and self.mode == "ftb":
             self.mode = "bomb"
@@ -169,26 +170,26 @@ class BomberSquadron(Squadron):
         return Bomber(self.x + m.cos(fd) * fr, self.y + m.sin(fd) * fr, self.d, self.speed, self.team, self, self.target_boat)
 
     def bomb(self):
-        self.target_boat.health -= 10 * len(self.planes)  # Each survivng plane does 10 damage
+        self.target_boat.health -= self.bomb_damage * len(self.planes)  # Each survivng plane does 10 damage
         self.mode = "rtb"
 
 
 class FighterSquadron(Squadron):
-    def __init__(self, origin_boat, speed, team, plane_count, target_boat, power, fuel, hpp, global_squadrons, global_projs):
+    def __init__(self, origin_boat, speed, team, plane_count, target_boat, power, fuel, hpp, turn_rate, global_squadrons, global_projs):
         self.power = power
         self.global_projs = global_projs
         self.global_squadrons = global_squadrons
         self.target_squadron = None
         self.old_mode = None
-        super().__init__(origin_boat, speed, team, plane_count, target_boat, fuel, hpp)
+        super().__init__(origin_boat, speed, team, plane_count, target_boat, fuel, hpp, turn_rate)
 
     def update(self, camera):
-        self.general_update()
+        self.general_update(camera)
         if self.distance_target_boat < 10 and self.mode == "ftb":
             self.mode = "orbit"
 
         nearest = None
-        distance = 100
+        distance = 200
         for s in self.global_squadrons:
             if s != self and s.team != self.team:
                 for p in s.planes:
@@ -205,7 +206,7 @@ class FighterSquadron(Squadron):
             for p in self.planes:  # Telling all my planes to target this squadron
                 p.target_squadron = self.target_squadron
                 p.shoot()
-                p.dogfight_update()
+                p.dogfight_update(self.turn_rate, camera)
         elif self.mode == "dgft":  # No nearby targets, leave dgft mode
             self.mode = self.old_mode  # return to the previous mode before the dogfight
 
@@ -230,9 +231,9 @@ class Plane:
         else:
             self.color = (255, 0, 0)
 
-    def move(self):
-        self.x += m.cos(self.d) * self.speed
-        self.y += m.sin(self.d) * self.speed
+    def move(self, camera):
+        self.x += m.cos(self.d) * self.speed * camera.dt
+        self.y += m.sin(self.d) * self.speed * camera.dt
 
 
 class Fighter(Plane):
@@ -273,15 +274,15 @@ class Fighter(Plane):
 
         pygame.draw.polygon(camera.foreground, self.color, points, 1)
 
-    def dogfight_update(self):
+    def dogfight_update(self, turn_rate, camera):
         self.dd = lead_shot(self, self.target_plane, 5)
         # Turning the plane towards their desired direction
         if m.cos(self.dd) * m.sin(self.d) > m.sin(self.dd) * m.cos(self.d):
-            self.d -= .05
+            self.d -= turn_rate * camera.dt
         else:
-            self.d += .05
+            self.d += turn_rate * camera.dt
 
-        self.move()
+        self.move(camera)
 
 
 
