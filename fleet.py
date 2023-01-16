@@ -115,8 +115,8 @@ class AbstractCarrier(AbstractBoat):
                   (x + m.cos(d - a + m.pi) * size, y + m.sin(d - a + m.pi) * size),
                   (x + m.cos(d + a + m.pi) * size, y + m.sin(d + a + m.pi) * size)]
         pygame.draw.polygon(surface, blue, points, 1)
-        pgt.text(surface, (x - 25, y - 65), str(self.bomber_count), (128, 128, 0), 15, "right")
-        pgt.text(surface, (x + 14, y - 65), str(self.fighter_count), (128, 128, 128), 15, "right")
+        pgt.text(surface, (x - 25, y - 65), str(m.ceil(self.bomber_count)), (128, 128, 0), 15, "right")
+        pgt.text(surface, (x + 14, y - 65), str(m.ceil(self.fighter_count)), (128, 128, 128), 15, "right")
 
 
 class AbstractDestroyer(AbstractBoat):
