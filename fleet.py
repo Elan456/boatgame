@@ -32,7 +32,7 @@ class Fleet:
         self.by = 0
 
         self.level = 1  # What level does the player need to beat next
-        self.money = 10  # How much money the player has
+        self.money = 10000000  # How much money the player has
 
     def add_new_carrier(self):
         self.boats.append(AbstractCarrier())

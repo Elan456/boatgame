@@ -197,13 +197,20 @@ class UpgradeMenu:
         x = 50
         y = 50
         c = 0
+        d = 0  # So a new row is started every 10 boats
         for b in self.players_fleet.entities:
             b.x = x
             b.y = y
             c += 1
-            if c == 2:
-                y += 90
+            d += 1
+            if d == 15:
+                d = 0
+                y += 110
                 x = 0
+            if c == 2:
+                y += 100
+                x = 0
+                d = 0
             b.draw(camera)
             x += 50
 

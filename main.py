@@ -9,15 +9,11 @@ from fleet import Fleet
 
 pygame.init()
 
-
-
 black = (0, 0, 0, 0)
 white = (255, 255, 255)
 blue = (0, 0, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
-
-print(pygame.display.Info())
 
 display_info = pygame.display.Info()
 
@@ -33,10 +29,10 @@ clock = pygame.time.Clock()
 
 players_fleet = Fleet()
 
-camera = Camera(0, 0, [pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]], d_width, d_height, clock, gameDisplay, boat_surface, plane_surface, ui_surface)
+camera = Camera(0, 0, [pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]], d_width, d_height, clock, gameDisplay,
+                boat_surface, plane_surface, ui_surface)
 camera.players_fleet = players_fleet
 main_menu = MainMenu(camera, players_fleet)
-
 
 
 def select_entity(x, y, fleet_things, current_selection):
@@ -63,7 +59,8 @@ def do_menu():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.__dict__["button"] == 1:  # left click
                         x, y = event.__dict__["pos"]
-                        camera.selected_boat_abstract = select_entity(x, y, players_fleet.entities, camera.selected_boat_abstract)
+                        camera.selected_boat_abstract = select_entity(x, y, players_fleet.entities,
+                                                                      camera.selected_boat_abstract)
 
         camera.ui.fill(black)
         camera.background.fill(black)
@@ -80,7 +77,6 @@ def do_menu():
         pgt.text(camera.gameDisplay, (20, 20), str(int(camera.clock.get_fps())), (100, 100, 100), 15, "right")
         pygame.display.update()
         camera.dt = clock.tick(60) / 16
-
 
 
 do_menu()
