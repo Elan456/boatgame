@@ -1,4 +1,5 @@
 import pygame
+import random
 
 red = (255, 0, 0)
 orange = (255, 95, 31)
@@ -19,6 +20,8 @@ class Effect:
 class Explosion(Effect):
     def __init__(self, x, y):
         super().__init__(x, y)
+        self.sets = random.randint(2, 5)
+        self.max_size = random.randint(10, 30)
 
     # noinspection PyTypeChecker
     def update(self, camera):
@@ -26,7 +29,11 @@ class Explosion(Effect):
         self.size *= 1.2
         pygame.draw.circle(camera.foreground, red, (self.x, self.y), self.size, 2)
         pygame.draw.circle(camera.foreground, orange, (self.x, self.y), max(0, self.size - 2), 2)
-        if self.size > 20:
+        if self.size > self.max_size:
+            self.sets -= 1
+            self.size = .5
+            self.max_size = random.randint(10, 30)
+        if self.sets == 0:
             self.active = False
 
 

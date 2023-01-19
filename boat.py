@@ -116,10 +116,10 @@ class Carrier(Boat):
         self.fighter_health = fighter_health
         self.bomber_health = bomber_health
         self.bomb_damage = bomb_damage
-        self.bombers = m.ceil(bombers)
-        self.fighters = m.ceil(fighters)
-        self.bombers_per_squadron = m.ceil(bombers_per_squadron)
-        self.fighters_per_squadron = m.ceil(fighters_per_squadron)
+        self.bombers = round(bombers)
+        self.fighters = round(fighters)
+        self.bombers_per_squadron = round(bombers_per_squadron)
+        self.fighters_per_squadron = round(fighters_per_squadron)
         self.fighter_fuel = fighter_fuel
         self.fighter_speed = fighter_speed
         self.bomber_fuel = bomber_fuel
@@ -134,6 +134,17 @@ class Carrier(Boat):
         # else:
         #     self.plane_cooldown = random.randint(300, 500)
         self.bomber_range = self.bomber_fuel * self.bomber_speed - 50
+        self.rect_progress = 0  # Progress in moving in the rectangle idle way
+
+    def move_in_rectangle(self, camera):
+        self.rect_progress += camera.dt * self.speed
+
+        if self.rect_progress > 150:
+            if self.rect_progress < 150 + (m.pi * self.speed) / (self.turn_rate):
+                self.d += self.turn_rate * camera.dt
+            else:
+                self.rect_progress = 0
+
 
     def update(self, camera):
         self.camera = camera
@@ -152,7 +163,7 @@ class Carrier(Boat):
             if len(self.waypoints) > 0:
                 self.follow_waypoints(camera)
             else:
-                self.d += self.turn_rate * camera.dt
+                self.move_in_rectangle(camera)
         self.pos_update(camera)
 
         if self.health <= 0:
@@ -323,7 +334,7 @@ class Carrier(Boat):
         if self.plane_cooldown == 0:
             count = min(self.bombers, self.bombers_per_squadron)
             if count > 0:
-                new_squadron = BomberSquadron(self, self.bomber_speed, self.team, count, target_boat, self.bomb_damage, self.bomber_fuel, self.bomber_health, self.bomber_turn_rate)
+                new_squadron = BomberSquadron(self, self.bomber_speed, self.team, count, target_boat, self.bomb_damage, self.bomber_fuel, self.bomber_health, self.bomber_turn_rate, self.global_projs)
                 self.global_squadrons.append(new_squadron)
                 self.my_squadrons.append(new_squadron)
                 self.bombers -= count

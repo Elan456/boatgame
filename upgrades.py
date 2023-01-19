@@ -26,7 +26,7 @@ class AbstractCarrier(Boat):
     health = Upgrade(400, 10000)
     speed = Upgrade(.2, 1.5)
     bomber_count = Upgrade(3, 32)
-    bomber_squad_size = Upgrade(1, 8)
+    bomber_squad_size = Upgrade(1, 17)
     fighter_count = Upgrade(2, 32)
     fighter_squad_size = Upgrade(1, 8)
     aa_power = Upgrade(.5, 8)

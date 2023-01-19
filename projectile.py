@@ -80,8 +80,39 @@ class Shell(Projectile):
                   (self.x + m.cos(self.d - a + m.pi) * size, self.y + m.sin(self.d - a + m.pi) * size),
                   (self.x + m.cos(self.d + a + m.pi) * size, self.y + m.sin(self.d + a + m.pi) * size)]
 
-        pygame.draw.circle(camera.foreground, self.color, (self.x - m.cos(self.d) * size, self.y - m.sin(self.d) * size), size - 2)
+        pygame.draw.circle(camera.foreground, self.color,
+                           (self.x - m.cos(self.d) * size, self.y - m.sin(self.d) * size), size - 2)
         pygame.draw.polygon(camera.foreground, (128, 128, 0), points)
+
+
+class Bomb(Projectile):
+    def __init__(self, x, y, d, target, damage, speed):
+        super().__init__(x, y, d, target, damage)
+        self.target_distance = None
+        self.draw_size = 5
+        self.speed = speed
+        self.old_distance = m.dist((self.x, self.y), (self.target.x, self.target.y))
+        self.hit_target = False
+
+    def deal_damage(self):
+        self.target.health -= self.damage
+        self.hit_target = True  # So a splash is not made
+
+    def update(self, camera):
+        if self.active:
+            self.x += m.cos(self.d) * self.speed * camera.dt
+            self.y += m.sin(self.d) * self.speed * camera.dt
+            self.target_distance = m.dist((self.x, self.y), (self.target.x, self.target.y))
+            self.draw_size -= .1 * camera.dt
+            if self.target_distance < 10 and self.target.active:
+                self.deal_damage()
+                self.active = False
+            elif self.draw_size < 0:
+                self.active = False
+
+    def draw(self, camera):
+        pygame.draw.circle(camera.foreground, (255, 255, 255), (self.x, self.y), self.draw_size)
+
 
 
 class Bullet(Projectile):

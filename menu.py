@@ -304,7 +304,7 @@ class UpgradeButton:
         pgt.text(camera.ui, (self.x + 5, self.y + self.h - 25), self.name, black, 30, "right")
 
         if self.selected.upgrade_stage[self.upgrade_name] < 6:  # Can they still buy upgrades
-            pgt.text(camera.ui, (self.x + 5, self.y + 30), "$ " + str(show_cost), black, 40, "right")
+            pgt.text(camera.ui, (self.x + 5, self.y + 20), "$ " + str(show_cost), black, 40, "right")
 
         # pgt.text(camera.ui, (self.x + 50 + UpgradeButton.xspac, self.y + 5), "Current: " + str(current_value), black,
         #          35, "right")

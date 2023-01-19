@@ -9,6 +9,12 @@ from effects import *
 white = (255, 255, 255)
 black = (0, 0, 0)
 
+k = (1 / -100) * m.log(5 / 1000)
+
+
+def get_next_boat_value(boats_sunk):
+    return 5 * m.e ** (k * boats_sunk)
+
 
 # noinspection PyTypeChecker
 class Battle:
@@ -76,7 +82,7 @@ class Infinite(Battle):
                 if event.__dict__["button"] == 1:  # left click
                     x, y = event.__dict__["pos"]
                     for b in self.boats:
-                        if m.sqrt((b.x - x) ** 2 + (b.y - y) ** 2) < 40:
+                        if m.sqrt((b.x - x) ** 2 + (b.y - y) ** 2) < 40 and b.team == 1:
                             camera.selected_boat = b
                             break
                 elif event.__dict__["button"] == 3:  # right click
@@ -125,10 +131,16 @@ class Infinite(Battle):
                         self.effects.append(Splash(entity.x, entity.y))
                 elif isinstance(entity, Bullet):
                     self.projs.remove(entity)
+                elif isinstance(entity, Bomb):
+                    self.projs.remove(entity)
+                    if entity.hit_target:
+                        self.effects.append(Explosion(entity.x, entity.y))
+                    else:
+                        self.effects.append(Splash(entity.x, entity.y))
                 elif isinstance(entity, Boat):
                     self.boats.remove(entity)
                     if entity.team == 2:
-                        camera.players_fleet.money += 5 * 1.05 ** self.boats_sunk
+                        camera.players_fleet.money += get_next_boat_value(self.boats_sunk)
                         self.boats_sunk += 1
 
                 elif isinstance(entity, Squadron):
@@ -176,7 +188,7 @@ class Infinite(Battle):
 
         pygame.draw.circle(camera.ui, (0, 255, 0), (camera.selected_boat.x + m.cos(camera.selected_boat.d) * 20 / 2,
                                                     camera.selected_boat.y + m.sin(camera.selected_boat.d) * 20 / 2),
-                           20 * 2.5, 1)
+                           5, 1)
         if isinstance(camera.selected_boat, Destroyer):
             if camera.selected_boat.gun_tick <= 1:
                 pygame.draw.circle(camera.gameDisplay, (0, 0, 255), (camera.selected_boat.x, camera.selected_boat.y),
@@ -184,10 +196,12 @@ class Infinite(Battle):
             else:
                 pygame.draw.circle(camera.gameDisplay, (0, 255, 255), (camera.selected_boat.x, camera.selected_boat.y),
                                    camera.selected_boat.gun_range, 1)
-        pgt.text(camera.ui, (camera.width - 200, 30), "Money: $" + str(round(camera.players_fleet.money, 2)), (128, 128, 0), 30,
+        pgt.text(camera.ui, (camera.width - 200, 30), "Money: $" + str(round(camera.players_fleet.money, 2)),
+                 (128, 128, 0), 30,
                  "left")
         pgt.text(camera.ui, (camera.width - 200, 60), "Sunk: " + str(self.boats_sunk), (0, 200, 0), 30, "left")
-        pgt.text(camera.ui, (camera.width - 200, 90), "Next Boat: +$" + str(round(5 * 1.05 ** self.boats_sunk, 2)), (0, 200, 0), 30,
+        pgt.text(camera.ui, (camera.width - 200, 90), "Next Boat: +$" + str(round(get_next_boat_value(self.boats_sunk), 2)),
+                 (0, 200, 0), 30,
                  "left")
 
 
