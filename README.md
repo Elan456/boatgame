@@ -19,3 +19,9 @@ Fight an AI armada to get money to spend on upgrading your boats to kill more en
 ### How to play:
 
 Click on the “How to Play” button in-game to learn how to play.
+
+### Images from playing the game:
+
+![Alt text](https://github.com/Elan456/boatgame/blob/32076a747bf1d2c70126925d85dfa5fc9b10884a/images/linking.png)
+![Alt text](https://github.com/Elan456/boatgame/blob/32076a747bf1d2c70126925d85dfa5fc9b10884a/images/overwhelm.png)
+![Alt text](https://github.com/Elan456/boatgame/blob/32076a747bf1d2c70126925d85dfa5fc9b10884a/images/upgrades.png)
