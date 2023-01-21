@@ -80,9 +80,9 @@ class Shell(Projectile):
                   (self.x + m.cos(self.d - a + m.pi) * size, self.y + m.sin(self.d - a + m.pi) * size),
                   (self.x + m.cos(self.d + a + m.pi) * size, self.y + m.sin(self.d + a + m.pi) * size)]
 
-        pygame.draw.circle(camera.foreground, self.color,
+        pygame.draw.circle(camera.midground, self.color,
                            (self.x - m.cos(self.d) * size, self.y - m.sin(self.d) * size), size - 2)
-        pygame.draw.polygon(camera.foreground, (128, 128, 0), points)
+        pygame.draw.polygon(camera.midground, (128, 128, 0), points)
 
 
 class Bomb(Projectile):
@@ -111,7 +111,7 @@ class Bomb(Projectile):
                 self.active = False
 
     def draw(self, camera):
-        pygame.draw.circle(camera.foreground, (255, 255, 255), (self.x, self.y), self.draw_size)
+        pygame.draw.circle(camera.midground, (255, 255, 255), (self.x, self.y), self.draw_size)
 
 
 
@@ -124,4 +124,4 @@ class Bullet(Projectile):
         self.target.squadron.health -= self.damage
 
     def draw(self, camera):
-        pygame.draw.line(camera.foreground, (128, 128, 0), (self.x, self.y), (self.x, self.y), 5)
+        pygame.draw.line(camera.midground, (128, 128, 0), (self.x, self.y), (self.x, self.y), 5)

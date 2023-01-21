@@ -23,6 +23,7 @@ d_height = display_info.current_h
 gameDisplay = pygame.display.set_mode((d_width, d_height))
 boat_surface = pygame.surface.Surface((d_width, d_height), pygame.SRCALPHA)
 plane_surface = pygame.surface.Surface((d_width, d_height), pygame.SRCALPHA)
+projectile_surface = pygame.surface.Surface((d_width, d_height), pygame.SRCALPHA)
 ui_surface = pygame.surface.Surface((d_width, d_height), pygame.SRCALPHA)
 
 clock = pygame.time.Clock()
@@ -30,7 +31,7 @@ clock = pygame.time.Clock()
 players_fleet = Fleet()
 
 camera = Camera(0, 0, [pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]], d_width, d_height, clock, gameDisplay,
-                boat_surface, plane_surface, ui_surface)
+                boat_surface, plane_surface, projectile_surface, ui_surface)
 camera.players_fleet = players_fleet
 main_menu = MainMenu(camera, players_fleet)
 
@@ -64,12 +65,14 @@ def do_menu():
 
         camera.ui.fill(black)
         camera.background.fill(black)
+        camera.midground.fill(black)
         camera.foreground.fill(black)
         gameDisplay.fill(black)
 
         main_menu.update(camera)
 
         gameDisplay.blit(camera.background, (0, 0))
+        gameDisplay.blit(camera.midground, (0, 0))
         gameDisplay.blit(camera.foreground, (0, 0))
         camera.gameDisplay.blit(camera.ui, (0, 0))
 

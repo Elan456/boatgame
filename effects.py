@@ -27,8 +27,8 @@ class Explosion(Effect):
     def update(self, camera):
         self.size += 1
         self.size *= 1.2
-        pygame.draw.circle(camera.foreground, red, (self.x, self.y), self.size, 2)
-        pygame.draw.circle(camera.foreground, orange, (self.x, self.y), max(0, self.size - 2), 2)
+        pygame.draw.circle(camera.midground, red, (self.x, self.y), self.size, 2)
+        pygame.draw.circle(camera.midground, orange, (self.x, self.y), max(0, self.size - 2), 2)
         if self.size > self.max_size:
             self.sets -= 1
             self.size = .5
@@ -44,6 +44,6 @@ class Splash(Effect):
     def update(self, camera):
         self.size += 1
         self.size *= 1.2
-        pygame.draw.circle(camera.foreground, blue, (self.x, self.y), self.size, 2)
+        pygame.draw.circle(camera.midground, blue, (self.x, self.y), self.size, 2)
         if self.size > 10:
             self.active = False

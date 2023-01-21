@@ -2,7 +2,8 @@ import pygame
 
 
 class Camera:
-    def __init__(self, x, y, mouse, width, height, clock, gameDisplay, background, foreground, ui):
+    def __init__(self, x, y, mouse, width, height, clock, gameDisplay, background, foreground, midground, ui):
+        self.midground = midground
         self.clock = clock
         self.mouse = mouse
         self.ui = ui

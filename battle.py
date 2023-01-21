@@ -108,6 +108,7 @@ class Infinite(Battle):
 
         camera.foreground.fill((0, 0, 0, 0))
         camera.background.fill((0, 0, 0, 0))
+        camera.midground.fill((0, 0, 0, 0))
 
         old_projs = self.projs.copy()
         old_boats = self.boats.copy()
